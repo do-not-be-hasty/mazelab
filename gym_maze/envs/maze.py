@@ -8,13 +8,15 @@ import gym
 from gym import spaces
 from gym.utils import seeding
 
+from gym_maze.envs.generators import SimpleMazeGenerator, RandomMazeGenerator, RandomBlockMazeGenerator, UMazeGenerator, TMazeGenerator, WaterMazeGenerator
+
 
 class MazeEnv(gym.Env):
     """Configurable environment for maze. """
     metadata = {'render.modes': ['human', 'rgb_array']}
     
     def __init__(self, 
-                 maze_generator, 
+                 maze_generator,
                  pob_size=1,
                  action_type='VonNeumann',
                  obs_type='full',
@@ -67,8 +69,14 @@ class MazeEnv(gym.Env):
                                                 high=high_obs,
                                                 shape=(self.pob_size*2+1, self.pob_size*2+1), 
                                                 dtype=np.float32)
+        elif self.obs_type == 'discrete':
+            # Agent position, target position
+            self.observation_space = spaces.Box(low=-1e9,
+                                                high=1e9,
+                                                shape=(4,), 
+                                                dtype=np.float32)
         else:
-            raise TypeError('Observation type must be either \'full\' or \'partial\'')
+            raise TypeError('Observation type must be either \'full\', \'partial\' or \'discrete\'')
         
         
         # Colormap: order of color is, free space, wall, agent, food, poison
@@ -194,6 +202,8 @@ class MazeEnv(gym.Env):
             return self._get_full_obs()
         elif self.obs_type == 'partial':
             return self._get_partial_obs(self.pob_size)
+        elif self.obs_type == 'discrete':
+            return self._get_discrete_obs(self.pob_size)
 
     def _get_full_obs(self):
         """Return a 2D array representation of maze."""
@@ -223,6 +233,10 @@ class MazeEnv(gym.Env):
             pos += np.abs(offset)
 
         return maze[pos[0]-size : pos[0]+size+1, pos[1]-size : pos[1]+size+1]
+    
+    def _get_discrete_obs(self, size=1):
+        """Get agent and goal position"""
+        return np.array([self.state[0], self.state[1], self.goal_states[0][0], self.goal_states[0][1]])
         
     def _get_video(self, interval=200, gif_path=None):
         if self.live_display:
