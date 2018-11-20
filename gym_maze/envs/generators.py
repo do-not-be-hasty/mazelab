@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.random import randint
+import numpy.random
 
 from itertools import product as cartesian_product
 
@@ -9,6 +9,7 @@ from skimage.draw import circle, circle_perimeter
 class MazeGenerator(object):
     def __init__(self):
         self.maze = None
+        self.rnd = np.random.RandomState()
     
     def sample_state(self):
         """Uniformaly sample an initial state and a goal state"""
@@ -17,7 +18,7 @@ class MazeGenerator(object):
         free_space = list(zip(free_space[0], free_space[1]))
 
         # Sample indices for initial state and goal state
-        init_idx, goal_idx = np.random.choice(len(free_space), size=2, replace=False)
+        init_idx, goal_idx = self.rnd.choice(len(free_space), size=2, replace=False)
         
         # Convert initial state to a list, goal states to list of list
         init_state = list(free_space[init_idx])
@@ -27,6 +28,9 @@ class MazeGenerator(object):
         
     def get_maze(self):
         return self.maze
+    
+    def set_seed(self, seed):
+        self.rnd.seed(seed)
 
 
 class SimpleMazeGenerator(MazeGenerator):
@@ -37,13 +41,14 @@ class SimpleMazeGenerator(MazeGenerator):
         
 
 class RandomMazeGenerator(MazeGenerator):
-    def __init__(self, width=81, height=51, complexity=.75, density=.75):
+    def __init__(self, width=15, height=5, complexity=.75, density=.75, seed=None):
         super().__init__()
         
         self.width = width
         self.height = height
         self.complexity = complexity
         self.density = density
+        self.set_seed(seed)
         
         self.maze = self._generate_maze()
         
@@ -63,7 +68,7 @@ class RandomMazeGenerator(MazeGenerator):
         Z[:, 0] = Z[:, -1] = 1
         # Make aisles
         for i in range(self.density):
-            x, y = randint(0, shape[1]//2 + 1) * 2, randint(0, shape[0]//2 + 1) * 2
+            x, y = self.rnd.randint(0, shape[1]//2 + 1) * 2, self.rnd.randint(0, shape[0]//2 + 1) * 2
             Z[y, x] = 1
             for j in range(self.complexity):
                 neighbours = []
@@ -72,7 +77,7 @@ class RandomMazeGenerator(MazeGenerator):
                 if y > 1:             neighbours.append((y - 2, x))
                 if y < shape[0] - 2:  neighbours.append((y + 2, x))
                 if len(neighbours):
-                    y_,x_ = neighbours[randint(0, len(neighbours))]
+                    y_,x_ = neighbours[self.rnd.randint(0, len(neighbours))]
                     if Z[y_, x_] == 0:
                         Z[y_, x_] = 1
                         Z[y_ + (y - y_) // 2, x_ + (x - x_) // 2] = 1
@@ -98,7 +103,7 @@ class RandomBlockMazeGenerator(MazeGenerator):
         all_idx = np.array(list(cartesian_product(range(maze_size), range(maze_size))))
 
         # Randomly sample locations according to obstacle_ratio
-        random_idx_idx = np.random.choice(maze_size**2, size=int(self.obstacle_ratio*maze_size**2), replace=False)
+        random_idx_idx = self.rnd.choice(maze_size**2, size=int(self.obstacle_ratio*maze_size**2), replace=False)
         random_obs_idx = all_idx[random_idx_idx]
 
         # Fill obstacles
@@ -262,8 +267,8 @@ class TMazeGenerator(MazeGenerator):
         idxs_goal = np.where(free_goal == 0)
         
         # Set randomly selected initial and goal positions temporarily
-        free_init[np.random.choice(idxs_init[0]), np.random.choice(idxs_init[1])] = 2
-        free_goal[np.random.choice(idxs_goal[0]), np.random.choice(idxs_goal[1])] = 3
+        free_init[self.rnd.choice(idxs_init[0]), self.rnd.choice(idxs_init[1])] = 2
+        free_goal[self.rnd.choice(idxs_goal[0]), self.rnd.choice(idxs_goal[1])] = 3
         
         # Find the global indices for initial and goal position
         idx_init = np.where(self.maze == 2)
@@ -294,7 +299,7 @@ class WaterMazeGenerator(MazeGenerator):
         self.platform = np.zeros_like(self.maze)
         radius_diff = self.radius_maze - self.radius_platform - 1
         valid_x, valid_y = circle(self.radius_maze, self.radius_maze, radius_diff)
-        coord_platform = np.stack([valid_x, valid_y], axis=1)[np.random.choice(range(valid_x.shape[0]))]
+        coord_platform = np.stack([valid_x, valid_y], axis=1)[self.rnd.choice(range(valid_x.shape[0]))]
         self.platform[circle(*coord_platform, self.radius_platform)] = 3
         
         # Add platform to the maze array
@@ -307,7 +312,7 @@ class WaterMazeGenerator(MazeGenerator):
         free_space = list(zip(*free_space))
 
         # Sample indices for initial state
-        init_idx = np.random.choice(len(free_space), size=1)[0]
+        init_idx = self.rnd.choice(len(free_space), size=1)[0]
         
         # Convert initial state to a list, goal states to list of list
         init_state = list(free_space[init_idx])

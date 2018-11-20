@@ -173,6 +173,9 @@ class MazeEnv(gym.Env):
             self.fig.set_dpi(100)
 
         return self.fig
+    
+    def set_live_display(self, live_display):
+        self.live_display = live_display
         
     def _goal_test(self, state):
         """Return True if current state is a goal state."""
