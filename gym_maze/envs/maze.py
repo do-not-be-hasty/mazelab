@@ -21,13 +21,14 @@ class MazeEnv(gym.Env):
                  action_type='VonNeumann',
                  obs_type='full',
                  live_display=False,
-                 render_trace=False):
+                 render_trace=False,
+                 **generator_args):
         """Initialize the maze. DType: list"""
         # Random seed with internal gym seeding
         self.seed()
         
         # Maze: 0: free space, 1: wall
-        self.maze_generator = maze_generator
+        self.maze_generator = maze_generator(**generator_args)
         self.maze = np.array(self.maze_generator.get_maze())
         self.maze_size = self.maze.shape
         self.init_state, self.goal_states = self.maze_generator.sample_state()
