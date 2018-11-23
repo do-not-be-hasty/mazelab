@@ -18,8 +18,10 @@ class MazeEnv(gym.Env):
     def __init__(self, 
                  maze_generator,
                  pob_size=1,
+                 step_limit=np.inf,
                  action_type='VonNeumann',
                  obs_type='full',
+                 reward_type='sparse',
                  live_display=False,
                  render_trace=False,
                  **generator_args):
@@ -37,6 +39,9 @@ class MazeEnv(gym.Env):
         self.traces = []
         self.action_type = action_type
         self.obs_type = obs_type
+        self.reward_type = reward_type
+        self.step_limit = step_limit
+        self.num_steps = 0
         
         # If True, show the updated display each time render is called rather
         # than storing the frames and creating an animation at the end
@@ -92,18 +97,39 @@ class MazeEnv(gym.Env):
         # Update current state
         self.state = self._next_state(self.state, action)
         
+        self.num_steps += 1
+        
         # Footprint: Record agent trajectory
         self.traces.append(self.state)
         
-        if self._goal_test(self.state):  # Goal check
-            reward = +1
-            done = True
-        elif self.state == old_state:  # Hit wall
-            reward = -1
-            done = False
-        else:  # Moved, small negative reward to encourage shorest path
-            reward = -0.01
-            done = False
+        if self.reward_type == 'sparse':
+            if self._goal_test(self.state):  # Goal check
+                reward = +1
+                done = True
+            elif self.num_steps >= self.step_limit:
+                reward = -100
+                done = True
+            elif self.state == old_state:  # Hit wall
+                reward = -1
+                done = False
+            else:  # Moved, small negative reward to encourage shorest path
+                reward = -0.01
+                done = False
+        elif self.reward_type == 'l2':
+            if self._goal_test(self.state):  # Goal check
+                reward = +100
+                done = True
+            elif self.num_steps >= self.step_limit:
+                reward = -self._distance(self.state, self.goal_states[0])
+                done = True
+            elif self.state == old_state:  # Hit wall
+                reward = -0.1
+                done = False
+            else:  # Moved, small negative reward to encourage shorest path
+                reward = -0.01
+                done = False
+        else:
+            assert False, "Unknown reward type: " + reward_type
         
         # Additional info
         info = {}
@@ -126,6 +152,8 @@ class MazeEnv(gym.Env):
         self.ax_imgs = []
         # Clean the traces of the trajectory
         self.traces = [self.init_state]
+        
+        self.num_steps = 0
         
         return self._get_obs()
     
@@ -175,8 +203,11 @@ class MazeEnv(gym.Env):
 
         return self.fig
     
-    def set_live_display(self, live_display):
+    def _set_live_display(self, live_display):
         self.live_display = live_display
+    
+    def _set_step_limit(self, step_limit):
+        self.step_limit = step_limit
         
     def _goal_test(self, state):
         """Return True if current state is a goal state."""
@@ -252,6 +283,21 @@ class MazeEnv(gym.Env):
             anim.save(gif_path, writer='imagemagick', fps=10)
         return anim
     
+    def _distance(self, state, goal):
+        return (state[0]-goal[0])**2 + (state[1]-goal[1])**2
+    
+
+class GoalMazeEnv(MazeEnv, gym.GoalEnv):
+    def __init__(self, 
+                 maze_generator,
+                 pob_size=1,
+                 action_type='VonNeumann',
+                 obs_type='full',
+                 live_display=False,
+                 render_trace=False,
+                 **generator_args):
+        super(GoalMazeEnv, self).__init__(maze_generator, pob_size, action_type, obs_type, live_display, render_trace, **generator_args)
+
 
 class SparseMazeEnv(MazeEnv):
     def step(self, action):
