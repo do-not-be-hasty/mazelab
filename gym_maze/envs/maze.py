@@ -43,6 +43,8 @@ class MazeEnv(gym.Env):
         self.step_limit = step_limit
         self.num_steps = 0
         
+        self.reset_rewards_info()
+        
         # If True, show the updated display each time render is called rather
         # than storing the frames and creating an animation at the end
         self.live_display = live_display
@@ -91,50 +93,81 @@ class MazeEnv(gym.Env):
         self.norm = colors.BoundaryNorm(self.bounds, self.cmap.N)
         
         self.ax_imgs = []  # For generating videos
-        
-    def step(self, action):
-        old_state = self.state
-        # Update current state
-        self.state = self._next_state(self.state, action)
-        
-        self.num_steps += 1
-        
-        # Footprint: Record agent trajectory
-        self.traces.append(self.state)
-        
+    
+    def compute_reward(self, state, goal):
         if self.reward_type == 'sparse':
-            if self._goal_test(self.state):  # Goal check
+            if state == goal:  # Goal check
                 reward = +1
                 done = True
             elif self.num_steps >= self.step_limit:
                 reward = -100
                 done = True
-            elif self.state == old_state:  # Hit wall
-                reward = -1
-                done = False
-            else:  # Moved, small negative reward to encourage shorest path
+            elif state == self.old_state:  # Hit wall
                 reward = -0.01
                 done = False
+            else:  # Moved, small negative reward to encourage shorest path
+                reward = -0.001
+                done = False
         elif self.reward_type == 'l2':
-            if self._goal_test(self.state):  # Goal check
+            if state == goal:  # Goal check
                 reward = +100
                 done = True
             elif self.num_steps >= self.step_limit:
-                reward = -self._distance(self.state, self.goal_states[0])
+                reward = -self._distance(state, goal)
                 done = True
-            elif self.state == old_state:  # Hit wall
-                reward = -0.1
+            elif state == self.old_state:  # Hit wall
+                reward = -0.01
                 done = False
             else:  # Moved, small negative reward to encourage shorest path
-                reward = -0.01
+                reward = -0.001
                 done = False
         else:
             assert False, "Unknown reward type: " + reward_type
         
+        return reward
+        
+    def step(self, action):
+        self.old_state = self.state
+        # Update current state
+        self.state = self._next_state(self.state, action)
+        
+        self.num_steps += 1
+        self.global_steps += 1
+        
+        # Footprint: Record agent trajectory
+        self.traces.append(self.state)
+        
+        reward = self.compute_reward(self.state, self.goal_states[0])
+        
+        if self.state == self.goal_states[0] or self.num_steps >= self.step_limit:
+            done = True
+        else:
+            done = False
+        
         # Additional info
         info = {}
         
+        self.step_rewards.append(reward)
+        if done:
+            self.final_rewards.append(sum(self.step_rewards))
+            self.step_rewards = []
+            self.num_episodes += 1
+            if len(self.final_rewards) > 100:
+                self.final_rewards = self.final_rewards[-100:]
+        
         return self._get_obs(), reward, done, info
+    
+    def print_rewards_info(self):
+        print("Number of steps: ", self.global_steps)
+        print("Episodes completed: ", self.num_episodes)
+        if self.num_episodes > 0:
+            print("100ep mean: ", np.mean(self.final_rewards))
+    
+    def reset_rewards_info(self):
+        self.num_episodes = 0
+        self.global_steps = 0
+        self.final_rewards = []
+        self.step_rewards = []
     
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -291,12 +324,23 @@ class GoalMazeEnv(MazeEnv, gym.GoalEnv):
     def __init__(self, 
                  maze_generator,
                  pob_size=1,
+                 step_limit=np.inf,
                  action_type='VonNeumann',
                  obs_type='full',
+                 reward_type='sparse',
                  live_display=False,
                  render_trace=False,
                  **generator_args):
-        super(GoalMazeEnv, self).__init__(maze_generator, pob_size, action_type, obs_type, live_display, render_trace, **generator_args)
+        super(GoalMazeEnv, self).__init__(maze_generator, pob_size, step_limit, action_type, obs_type, reward_type, live_display, render_trace, **generator_args)
+        self.distance_threshold = 10
+        
+    def step(self, action):
+        obs, reward, done, info = super(GoalMazeEnv, self).step(action)
+        
+        return _convert_observation(obs, self.state), reward, done, info
+    
+    def _convert_observation(self, obs, state, goal):
+        return {'observation':obs, 'achieved_goal':state, 'desired_goal':goal}
 
 
 class SparseMazeEnv(MazeEnv):
