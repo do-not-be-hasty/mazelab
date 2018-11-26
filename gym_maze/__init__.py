@@ -44,5 +44,7 @@ register(
         'density':.5,
         'seed':9,
         'obs_type':'discrete',
+        'reward_type':'sparse',
+        'step_limit':1000,
     }
 )

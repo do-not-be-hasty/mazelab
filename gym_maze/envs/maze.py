@@ -95,34 +95,10 @@ class MazeEnv(gym.Env):
         self.ax_imgs = []  # For generating videos
     
     def compute_reward(self, state, goal):
-        if self.reward_type == 'sparse':
-            if state == goal:  # Goal check
-                reward = +1
-                done = True
-            elif self.num_steps >= self.step_limit:
-                reward = -100
-                done = True
-            elif state == self.old_state:  # Hit wall
-                reward = -0.01
-                done = False
-            else:  # Moved, small negative reward to encourage shorest path
-                reward = -0.001
-                done = False
-        elif self.reward_type == 'l2':
-            if state == goal:  # Goal check
-                reward = +100
-                done = True
-            elif self.num_steps >= self.step_limit:
-                reward = -self._distance(state, goal)
-                done = True
-            elif state == self.old_state:  # Hit wall
-                reward = -0.01
-                done = False
-            else:  # Moved, small negative reward to encourage shorest path
-                reward = -0.001
-                done = False
-        else:
-            assert False, "Unknown reward type: " + reward_type
+        if state == goal:  # Goal check
+            reward = +100
+        else:  # Moved, small negative reward to encourage shorest path
+            reward = -0.001
         
         return reward
         
@@ -337,7 +313,7 @@ class GoalMazeEnv(MazeEnv, gym.GoalEnv):
     def step(self, action):
         obs, reward, done, info = super(GoalMazeEnv, self).step(action)
         
-        return _convert_observation(obs, self.state), reward, done, info
+        return self._convert_observation(obs, self.state, self.goal_states[0]), reward, done, info
     
     def _convert_observation(self, obs, state, goal):
         return {'observation':obs, 'achieved_goal':state, 'desired_goal':goal}
