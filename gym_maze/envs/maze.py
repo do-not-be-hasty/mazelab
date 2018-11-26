@@ -308,12 +308,16 @@ class GoalMazeEnv(MazeEnv, gym.GoalEnv):
                  render_trace=False,
                  **generator_args):
         super(GoalMazeEnv, self).__init__(maze_generator, pob_size, step_limit, action_type, obs_type, reward_type, live_display, render_trace, **generator_args)
-        self.distance_threshold = 10
         
     def step(self, action):
         obs, reward, done, info = super(GoalMazeEnv, self).step(action)
         
         return self._convert_observation(obs, self.state, self.goal_states[0]), reward, done, info
+        
+    def reset(self):
+        obs = super(GoalMazeEnv, self).reset()
+        
+        return self._convert_observation(obs, self.state, self.goal_states[0])
     
     def _convert_observation(self, obs, state, goal):
         return {'observation':obs, 'achieved_goal':state, 'desired_goal':goal}
