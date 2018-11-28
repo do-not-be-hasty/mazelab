@@ -45,6 +45,6 @@ register(
         'seed':10,
         'obs_type':'discrete',
         'reward_type':'sparse',
-        'step_limit':1000,
+        'step_limit':300,
     }
 )

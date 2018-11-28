@@ -101,6 +101,9 @@ class MazeEnv(gym.Env):
             reward = -0.001
         
         return reward
+    
+    def change_obs_goal(self, obs, goal):
+        return np.array((obs[0], obs[1], goal[0], goal[1]))
         
     def step(self, action):
         self.old_state = self.state
