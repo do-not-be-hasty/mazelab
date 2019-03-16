@@ -96,7 +96,7 @@ class MazeEnv(gym.Env):
     
     def compute_reward(self, state, goal):
         if state == goal:  # Goal check
-            reward = +100
+            reward = +1
         else:  # Moved, small negative reward to encourage shorest path
             reward = -0.001
         
@@ -176,6 +176,7 @@ class MazeEnv(gym.Env):
         
         obs = self._get_full_obs()
         partial_obs = self._get_partial_obs(self.pob_size)
+        print(self._get_discrete_obs())
         
         # For rendering traces: Only for visualization, does not affect the observation data
         if self.render_trace:
@@ -283,7 +284,8 @@ class MazeEnv(gym.Env):
     
     def _get_discrete_obs(self, size=1):
         """Get agent and goal position"""
-        return np.array([self.state[0], self.state[1], self.goal_states[0][0], self.goal_states[0][1]])
+        #return np.array([self.state[0], self.state[1], self.goal_states[0][0], self.goal_states[0][1]])
+        return np.array([self.state[0], self.state[1]])
         
     def _get_video(self, interval=200, gif_path=None):
         if self.live_display:
