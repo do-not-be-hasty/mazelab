@@ -42,6 +42,7 @@ class MazeEnv(gym.Env):
         self.reward_type = reward_type
         self.step_limit = step_limit
         self.num_steps = 0
+        self.discrete_len = sum(self.maze_size)
         
         self.reset_rewards_info()
         
@@ -79,9 +80,9 @@ class MazeEnv(gym.Env):
                                                 dtype=np.float32)
         elif self.obs_type == 'discrete':
             # Agent position, target position
-            self.observation_space = spaces.Box(low=-1e9,
-                                                high=1e9,
-                                                shape=(4,), 
+            self.observation_space = spaces.Box(low=0,
+                                                high=1,
+                                                shape=(self.discrete_len,),
                                                 dtype=np.float32)
         else:
             raise TypeError('Observation type must be either \'full\', \'partial\' or \'discrete\'')
@@ -103,6 +104,7 @@ class MazeEnv(gym.Env):
         return reward
     
     def change_obs_goal(self, obs, goal):
+        assert False
         return np.array((obs[0], obs[1], goal[0], goal[1]))
         
     def step(self, action):
@@ -251,7 +253,7 @@ class MazeEnv(gym.Env):
         elif self.obs_type == 'partial':
             return self._get_partial_obs(self.pob_size)
         elif self.obs_type == 'discrete':
-            return self._get_discrete_obs(self.pob_size)
+            return self._get_discrete_obs(self.state)
 
     def _get_full_obs(self):
         """Return a 2D array representation of maze."""
@@ -282,10 +284,15 @@ class MazeEnv(gym.Env):
 
         return maze[pos[0]-size : pos[0]+size+1, pos[1]-size : pos[1]+size+1]
     
-    def _get_discrete_obs(self, size=1):
+    def _get_discrete_obs(self, obj_pos):
         """Get agent and goal position"""
         #return np.array([self.state[0], self.state[1], self.goal_states[0][0], self.goal_states[0][1]])
-        return np.array([self.state[0], self.state[1]])
+        # return np.array([self.state[0], self.state[1]])
+        obs = np.zeros((self.discrete_len,))
+        obs[obj_pos[0]] = 1
+        obs[self.maze_size[0]+obj_pos[1]] = 1
+
+        return obs
         
     def _get_video(self, interval=200, gif_path=None):
         if self.live_display:
@@ -313,16 +320,26 @@ class GoalMazeEnv(MazeEnv, gym.GoalEnv):
                  render_trace=False,
                  **generator_args):
         super(GoalMazeEnv, self).__init__(maze_generator, pob_size, step_limit, action_type, obs_type, reward_type, live_display, render_trace, **generator_args)
+
+        if self.obs_type == 'discrete':
+            # Agent position, target position
+            self.observation_space = spaces.Box(low=0,
+                                                high=1,
+                                                shape=(2*self.discrete_len,),
+                                                dtype=np.float32)
+        else:
+            raise TypeError('Observation type in GoalEnv must be \'discrete\'')
         
     def step(self, action):
         obs, reward, done, info = super(GoalMazeEnv, self).step(action)
         
-        return self._convert_observation(obs, self.state, self.goal_states[0]), reward, done, info
+        return self._convert_observation(obs, obs, self.goal_obs), reward, done, info
         
     def reset(self):
         obs = super(GoalMazeEnv, self).reset()
+        self.goal_obs = self._get_discrete_obs(self.goal_states[0])
         
-        return self._convert_observation(obs, self.state, self.goal_states[0])
+        return self._convert_observation(obs, obs, self.goal_obs)
     
     def _convert_observation(self, obs, state, goal):
         return {'observation':obs, 'achieved_goal':state, 'desired_goal':goal}
