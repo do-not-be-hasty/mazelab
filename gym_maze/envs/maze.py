@@ -178,7 +178,7 @@ class MazeEnv(gym.Env):
         
         obs = self._get_full_obs()
         partial_obs = self._get_partial_obs(self.pob_size)
-        print(self._get_discrete_obs())
+        print(self.state, self.goal_states)
         
         # For rendering traces: Only for visualization, does not affect the observation data
         if self.render_trace:
@@ -306,6 +306,15 @@ class MazeEnv(gym.Env):
     
     def _distance(self, state, goal):
         return (state[0]-goal[0])**2 + (state[1]-goal[1])**2
+
+    def _distance_to_goal(self):
+        return np.sqrt(self._distance(self.state, self.goal_states[0]))
+
+    def _distance_advantage(self):
+        return np.sqrt(self._distance(self.goal_states[0], self.init_state)) - self._distance_to_goal()
+
+    def _distance_diameter(self):
+        return np.sqrt(self._distance(self.goal_states[0], self.init_state))
     
 
 class GoalMazeEnv(MazeEnv, gym.GoalEnv):
