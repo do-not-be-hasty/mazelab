@@ -97,9 +97,9 @@ class MazeEnv(gym.Env):
     
     def compute_reward(self, state, goal):
         if state == goal:  # Goal check
-            reward = +1
+            reward = 0
         else:  # Moved, small negative reward to encourage shorest path
-            reward = -0.001
+            reward = -1
         
         return reward
     
