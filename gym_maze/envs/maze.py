@@ -42,7 +42,7 @@ class MazeEnv(gym.Env):
         self.reward_type = reward_type
         self.step_limit = step_limit
         self.num_steps = 0
-        self.discrete_len = sum(self.maze_size)
+        self.discrete_len = sum(self.maze_size)-4
         
         self.reset_rewards_info()
         
@@ -179,6 +179,7 @@ class MazeEnv(gym.Env):
         obs = self._get_full_obs()
         partial_obs = self._get_partial_obs(self.pob_size)
         print(self.state, self.goal_states)
+        print(self._get_discrete_obs(self.state), self._get_discrete_obs(self.goal_states[0]))
         
         # For rendering traces: Only for visualization, does not affect the observation data
         if self.render_trace:
@@ -289,8 +290,10 @@ class MazeEnv(gym.Env):
         #return np.array([self.state[0], self.state[1], self.goal_states[0][0], self.goal_states[0][1]])
         # return np.array([self.state[0], self.state[1]])
         obs = np.zeros((self.discrete_len,))
-        obs[obj_pos[0]] = 1
-        obs[self.maze_size[0]+obj_pos[1]] = 1
+        obs[obj_pos[0]-1] = 1
+        obs[self.maze_size[0]-2+obj_pos[1]-1] = 1
+
+        assert(np.sum(obs) == 2)
 
         return obs
         
