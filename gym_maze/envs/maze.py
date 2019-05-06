@@ -322,6 +322,42 @@ class MazeEnv(gym.Env):
 
     def _distance_diameter(self):
         return np.sqrt(self._distance(self.goal_states[0], self.init_state))
+
+    def get_dist_data(self):
+        # self.maze
+
+        data_x = []
+        data_y = []
+
+        for x0 in range(self.maze.shape[0]):
+            for y0 in range(self.maze.shape[1]):
+                if self.maze[x0,y0] == 1:
+                    continue
+
+                dist = np.full(self.maze.shape, np.inf)
+                q = [(x0,y0,0)]
+
+                while q != []:
+                    (x, y, d) = q[0]
+                    q = q[1:]
+
+                    if self.maze[x,y] == 1 or dist[x,y] <= d:
+                        continue
+                    dist[x,y] = d
+
+                    for (dx, dy) in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                        q.append((x+dx, y+dy, d+1))
+
+                for x in range(self.maze.shape[0]):
+                    for y in range(self.maze.shape[1]):
+                        if self.maze[x,y] == 1 or dist[x,y] == np.inf:
+                            continue
+                        data_x.append(np.concatenate([self._get_discrete_obs((x0,y0)), self._get_discrete_obs((x,y))]))
+                        data_y.append(dist[x,y])
+
+        return np.array(data_x), np.array(data_y)
+
+
     
 
 class GoalMazeEnv(MazeEnv, gym.GoalEnv):
