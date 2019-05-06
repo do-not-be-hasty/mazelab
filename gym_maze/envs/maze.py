@@ -22,6 +22,7 @@ class MazeEnv(gym.Env):
                  action_type='VonNeumann',
                  obs_type='full',
                  reward_type='sparse',
+                 resample_state=False,
                  live_display=False,
                  render_trace=False,
                  **generator_args):
@@ -34,6 +35,7 @@ class MazeEnv(gym.Env):
         self.maze = np.array(self.maze_generator.get_maze())
         self.maze_size = self.maze.shape
         self.init_state, self.goal_states = self.maze_generator.sample_state()
+        self.resample_state = resample_state
         
         self.render_trace = render_trace
         self.traces = []
@@ -160,6 +162,8 @@ class MazeEnv(gym.Env):
         self.maze = np.array(self.maze_generator.get_maze())
         
         # Set current state be initial state
+        if self.resample_state:
+            self.init_state, self.goal_states = self.maze_generator.sample_state()
         self.state = self.init_state
         
         # Clean the list of ax_imgs, the buffer for generating videos
@@ -328,10 +332,11 @@ class GoalMazeEnv(MazeEnv, gym.GoalEnv):
                  action_type='VonNeumann',
                  obs_type='full',
                  reward_type='sparse',
+                 resample_state=False,
                  live_display=False,
                  render_trace=False,
                  **generator_args):
-        super(GoalMazeEnv, self).__init__(maze_generator, pob_size, step_limit, action_type, obs_type, reward_type, live_display, render_trace, **generator_args)
+        super(GoalMazeEnv, self).__init__(maze_generator, pob_size, step_limit, action_type, obs_type, reward_type, resample_state, live_display, render_trace, **generator_args)
 
         if self.obs_type == 'discrete':
             # Agent position, target position
